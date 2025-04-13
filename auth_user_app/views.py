@@ -123,14 +123,19 @@ class ProfileView(APIView):
     permission_classes = IsAuthenticated,
     authentication_classes = TokenAuthentication,
 
+    # Foydalanuvchining [phone, name, is_active, is_staff, is_superuser] ma'lumotlarini qaytaradi
     def get(self, request):
         user = request.user
         return Response(
             {'Data': user.format()},
             status=status.HTTP_200_OK
             )
-
+ 
     def patch(self, request):
+        """
+        Foydalanuvchining telefon nomeri va ismini o'zgartiradi, 
+        agar data `key` berilsa va u to'g'ri bo'lsa superuser ga o'zgartiriladi
+        """
         data = request.data
         user = request.user
 
@@ -169,4 +174,46 @@ class ProfileView(APIView):
                 'Data': f"O'zgartirilgan ma'lumotlar {data}",
                 },
                 status=status.HTTP_200_OK
+            )
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response(
+            {'Message': 'Telefon raqamingiz hisobdan chiqarildi.'},
+            status=status.HTTP_200_OK
+        )
+
+
+class PasswordChangeView(APIView):
+    permission_classes = IsAuthenticated,
+    authentication_classes = TokenAuthentication,
+
+    def post(self, request):
+        data = request.data
+        user = request.user
+
+        if not data.get('old') or not data.get('new'):
+            return Response(
+                {"Messages": 'Eski yoki yangi parol kiritilmagan.'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if not user.check_password(data['old']):
+            return Response(
+                {"Error": "Eski parol noto'g'ri kiritilgan."},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if not validate_password(data['new']):
+            return Response(
+                {"Message": 'Parol talabga javob bermaydi, boshqa parol kiriting.'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        user.set_password(data['new'])
+        user.save()
+        return Response(
+            {'Message': "Parolingiz muvaffaqiyatli o'zgartirildi!"},
+            status=status.HTTP_200_OK
             )
