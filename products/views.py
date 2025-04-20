@@ -10,7 +10,7 @@ from rest_framework.authentication import TokenAuthentication
 # Create your views here.
 
 class CarsListView(generics.GenericAPIView):
-    permission_classes = permissions.IsAuthenticated,
+    # permission_classes = permissions.IsAuthenticated,
     authentication_classes = TokenAuthentication,
 
     def get(self, request, *args, **kwargs):

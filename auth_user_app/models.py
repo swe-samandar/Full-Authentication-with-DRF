@@ -47,3 +47,20 @@ class CustomUser(AbstractBaseUser):
             'is_staff': self.is_staff,
             'is_superuser': self.is_superuser
         }
+    
+
+class OTP(models.Model):
+    phone = models.CharField(max_length=12)
+    key = models.CharField(max_length=200)
+
+    is_expire = models.BooleanField(default=False)
+    is_used = models.BooleanField(default=False)
+    tried = models.PositiveSmallIntegerField(default=0)
+
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if self.tried >= 3:
+            self.is_expire = True
+        super(OTP, self).save()

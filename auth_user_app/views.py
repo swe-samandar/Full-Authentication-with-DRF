@@ -4,7 +4,11 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
-from .models import CustomUser
+from .models import CustomUser, OTP
+from random import randint
+import datetime
+import uuid
+import string
 
 
 def validate_phone_number(phone_):
@@ -23,21 +27,23 @@ class RegisterView(APIView):
         data = request.data
 
         # Telefon raqam va password kiritlganligini tekshiruvchi shartli qism
-        if 'phone' not in data or 'password' not in data:
+        if 'key' not in data or 'password' not in data:
             return Response(
-                {'Message': 'Telefon raqam yoki parol kiritilmagan.'},
+                {'Message': 'Key yoki parol kiritilmagan.'},
                 status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Telefon raqamni validatsiyadan o'tkazish
-        if not validate_phone_number(data['phone']):
+        otp = OTP.objects.filter(key=data['key']).first()
+
+        if not otp.is_used:
             return Response(
-                {"Message": 'Telefon raqamni tekshirib qaytadan kiriting.'},
+                {'Message': 'Siz o\'zinginzni kod bilan tasdiqlamagansiz.'},
                 status=status.HTTP_400_BAD_REQUEST
                 )
+
+        phone = CustomUser.objects.filter(phone=otp.phone)
 
         # Avval bu telefon raqam orqali ro'yxatdan o'tilmaganligini tekshiruvchi shartli qism
-        phone = CustomUser.objects.filter(phone=data['phone']).first()
         if phone:
             return Response(
                 {'Message': 'Bu telefon raqam bilan avval ro\'yxatdan o\'tilgan'},
@@ -53,13 +59,13 @@ class RegisterView(APIView):
 
         # Yuqoridagi shartlarni qanoatlantirgach foydalanuvchi ma'lumotlarini user_data nomli o'zgaruvchiga tenglashtirib oladi
         user_data = {
-            'phone': data['phone'],
+            'phone': otp.phone,
             'password': data['password'],
             'name': data.get('name', '')
             }
 
         # Agar `key'   `123` qiymatiga teng bo'lsa user_data ni yangilaydi
-        if data.get('key', '') == '123':
+        if data.get('secret_key', '') == '123':
             user_data.update({
                 'is_staff': True,
                 'is_superuser': True
@@ -85,7 +91,7 @@ class LoginView(APIView):
 
         if not user:
             return Response(
-                {'Error': "Bu telefon raqam bilan ro'yxatdan o'tilmangan."},
+                {'Error': "Bu telefon raqam bilan ro'yxatdan o'tilmagan."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -134,7 +140,7 @@ class ProfileView(APIView):
     def patch(self, request):
         """
         Foydalanuvchining telefon nomeri va ismini o'zgartiradi, 
-        agar data `key` berilsa va u to'g'ri bo'lsa superuser ga o'zgartiriladi
+        agar yuborilayotgan ma'lumotlar ichida `secret_key` mavjud va u to'g'ri bo'lsa superuser ga o'zgartiriladi.
         """
         data = request.data
         user = request.user
@@ -160,7 +166,7 @@ class ProfileView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
                 )
 
-        if data.get('key', '') == '123':
+        if data.get('secret_key', '') == '123':
             user.is_staff = True
             user.is_superuser = True
 
@@ -215,5 +221,106 @@ class PasswordChangeView(APIView):
         user.save()
         return Response(
             {'Message': "Parolingiz muvaffaqiyatli o'zgartirildi!"},
+            status=status.HTTP_200_OK
+            )
+
+
+class FirstStepAuthView(APIView):
+    def post(self, request):
+        data = request.data
+
+        if not data.get('phone'):
+            return Response(
+                {'Error': 'Telefon raqam kiritilmagan.'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Telefon raqamni validatsiya qilish qismi
+        if not validate_phone_number(data['phone']):
+            return Response(
+                {"Message": 'Telefon raqamni tekshirib qaytadan kiriting.'},
+                status=status.HTTP_400_BAD_REQUEST  
+                )
+        
+        """
+        random.randint dan foydalanib tuzilgan 4 xonali mijozga jo'natiladigan kod
+        """
+        # code_ = ''.join([str(randint(100000, 999999))[-1] for _ in range(4)])
+
+
+        """
+        Mijozga sms orqali yuborish uchun barcha raqamlar,
+        kichik va katta harflarni qatnashtirib 6 xonali kodni random tarzda tanlab oladi.
+        """
+        chars = string.digits + string.ascii_letters
+        code = ''.join([chars[randint(0, len(chars)-1)] for _ in range(6)])
+        key = str(uuid.uuid4()) + code
+
+        otp = OTP.objects.create(phone=data['phone'], key=key)
+        
+        return Response({
+            'code': code,
+            'key': otp.key},
+            status=status.HTTP_200_OK
+            )
+
+
+class SecondStepAuthView(APIView):
+    def post(self, request):
+        data = request.data
+        try:
+            code = data['code']
+            key = data['key']
+        except:
+            return Response(
+                {'Error': "Ma'lumotlar to'liq kiritlmagan."},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        otp = OTP.objects.filter(key=key).first()
+
+        if not otp:
+            return Response(
+                {'Error': "Noto'g'ri key yuborildi!"},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if otp.is_expire:
+            return Response(
+                {'Message': 'Key yaroqsiz'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if otp.is_used:
+            return Response(
+                {'Message': 'Bu koddan foydalanilgan.'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if (now - otp.created).total_seconds() >= 180:
+            otp.is_expire = True
+            otp.save()
+            return Response(
+                {'Message': 'Koddan foydalanish vaqti tugagan.'},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if key[-4:] != str(code):
+            otp.tried += 1
+            otp.save()
+            return Response(
+                {'Error': "Kod noto'g'ri kiritilgan!"},
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+        otp.is_used = True
+        otp.save()
+
+        user = CustomUser.objects.filter(phone=otp.phone).first()
+
+        return Response(
+            {'Message': 'Success!',
+            'is_registered': user is not None},
             status=status.HTTP_200_OK
             )

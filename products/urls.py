@@ -17,6 +17,6 @@ urlpatterns = [
     path('delete/<int:pk>', CarDeleteView.as_view()),
 ]
 
-router = DefaultRouter()
-router.register(r'all-cars', CarsViewSets, basename='cars')
-urlpatterns += router.urls
+# router = DefaultRouter()
+# router.register(r'all-methods/view-sets', CarsViewSets, basename='cars')
+# urlpatterns += router.urls
