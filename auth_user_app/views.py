@@ -9,6 +9,16 @@ from random import randint
 import datetime
 import uuid
 import string
+from methodism import METHODISM
+from auth_user_app import methods
+
+
+class Main(METHODISM):
+    file = methods
+    token_key = 'Token'
+    not_auth_methods = ['register', 'login', 'first_step_auth', 'second_step_auth']
+    
+
 
 
 def validate_phone_number(phone_):
@@ -35,7 +45,7 @@ class RegisterView(APIView):
 
         otp = OTP.objects.filter(key=data['key']).first()
 
-        if not otp.is_used:
+        if not otp or not otp.is_used:
             return Response(
                 {'Message': 'Siz o\'zinginzni kod bilan tasdiqlamagansiz.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -306,7 +316,7 @@ class SecondStepAuthView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
                 )
 
-        if key[-4:] != str(code):
+        if key[-6:] != str(code):
             otp.tried += 1
             otp.save()
             return Response(
