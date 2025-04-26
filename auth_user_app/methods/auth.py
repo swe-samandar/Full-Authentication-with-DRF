@@ -3,6 +3,7 @@ from methodism import custom_response, error_messages, MESSAGE
 from rest_framework.authtoken.models import Token
 from random import randint
 import string, uuid, datetime
+from .helper import send_with_thread
 
 
 # Validatsiya uchun yozilgan funksiyalar
@@ -34,8 +35,10 @@ def first_step_auth(request, params):
     code = ''.join([chars[randint(0, len(chars)-1)] for _ in range(6)])
     key = str(uuid.uuid4()) + code
 
+    send_with_thread('muhammadyusufmamadaliyev0306@gmail.com', code)
+
     otp = OTP.objects.create(phone=params['phone'], key=key)
-    return custom_response(True, data={'code': code, 'key': otp.key})
+    return custom_response(True, data={'code': code, 'key': otp.key}, message={"message":"Success!"})
 
 
 def second_step_auth(request, params):

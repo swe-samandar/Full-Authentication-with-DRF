@@ -8,6 +8,7 @@ from .views import (
     FirstStepAuthView,
     SecondStepAuthView,
     Main,
+    mail_sender,
     )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('password/change', PasswordChangeView.as_view()),
     path('auth/first-step', FirstStepAuthView.as_view()),
     path('auth/second-step', SecondStepAuthView.as_view()),
+    path('mail-sender', mail_sender)
 ]
