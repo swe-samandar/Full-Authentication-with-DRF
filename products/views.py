@@ -1,6 +1,6 @@
 from rest_framework.response import Response
-from .models import Car
-from .serializers import CarSerializer
+from .models import Product
+from .serializers import ProductSerializer
 from rest_framework import generics
 from rest_framework import permissions
 from rest_framework import viewsets, status
@@ -9,31 +9,31 @@ from rest_framework.authentication import TokenAuthentication
 
 # Create your views here.
 
-class CarsListView(generics.GenericAPIView):
+class ProductsListView(generics.GenericAPIView):
     # permission_classes = permissions.IsAuthenticated,
     authentication_classes = TokenAuthentication,
 
     def get(self, request, *args, **kwargs):
-        cars = Car.objects.all()
-        serializer = CarSerializer(cars, many=True)
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
         return Response({
             'data': serializer.data,
             'status': status.HTTP_200_OK,
-            'message': 'Cars List' if serializer.data else 'No data yet',
+            'message': 'Products List' if serializer.data else 'No data yet',
         })
 
 
-class CarCreateView(APIView):
+class ProductCreateView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        serializer = CarSerializer(data=request.data)
+        serializer = ProductSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             response = {
                 'data': serializer.data,
                 'status': status.HTTP_201_CREATED,
-                'message': 'Book Created'
+                'message': 'Product Created'
             }
 
         else:
@@ -46,19 +46,19 @@ class CarCreateView(APIView):
         return Response(response)
     
 
-class CarUpdateView(APIView):
+class ProductUpdateView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def put(self, request, pk):
         try:
-            car = Car.objects.get(id=pk)
-            serializer = CarSerializer(car, data=request.data)
+            product = Product.objects.get(id=pk)
+            serializer = ProductSerializer(product, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 response = {
                     'data': serializer.data,
                     'status': status.HTTP_200_OK,
-                    'message': 'Book Updated'
+                    'message': 'Product Updated'
                 }
             else:
                 response = {
@@ -72,20 +72,20 @@ class CarUpdateView(APIView):
             response = {
                 'data': str(e),
                 'status': status.HTTP_404_NOT_FOUND,
-                'message': 'Car not found'
+                'message': 'Product not found'
             }
             return Response(response)
 
     def patch(self, request, pk):
         try:
-            car = Car.objects.get(id=pk)
-            serializer = CarSerializer(car, data=request.data, partial=True)
+            product = Product.objects.get(id=pk)
+            serializer = ProductSerializer(product, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 response = {
                     'data': serializer.data,
                     'status': status.HTTP_200_OK,
-                    'messages': 'Book Updated'
+                    'messages': 'Product Updated'
                 }
             else:
                 response = {
@@ -99,22 +99,22 @@ class CarUpdateView(APIView):
             response = {
                 'data': str(e),
                 'status': status.HTTP_404_NOT_FOUND,
-                'message': 'Car not found'
+                'message': 'Product not found'
             }
             return Response(response)
 
 
-class CarDetailView(APIView):
+class ProductDetailView(APIView):
     permission_classes = [permissions.AllowAny]
     
     def get(self, request, pk):
         try:
-            car = Car.objects.get(id=pk)
-            serializer = CarSerializer(car)
+            product = Product.objects.get(id=pk)
+            serializer = ProductSerializer(product)
             response = {
                 'data': serializer.data,
                 'status': status.HTTP_200_OK,
-                'message': 'Car data'
+                'message': 'Product data'
             }
             return Response(response)
         
@@ -122,22 +122,22 @@ class CarDetailView(APIView):
                 response = {
                     'data': str(message),
                     'status': status.HTTP_404_NOT_FOUND,
-                    'message': 'Car not found'
+                    'message': 'Product not found'
                 }
                 return Response(response)
 
 
-class CarDeleteView(APIView):
+class ProductDeleteView(APIView):
     permission_classes = (permissions.AllowAny,)
 
     def delete(self, request, pk):
         try:
-            car = Car.objects.get(id=pk)
-            car.delete()
+            product = Product.objects.get(id=pk)
+            product.delete()
             response = {
                 'data': None,
                 'status': status.HTTP_200_OK,
-                'message': 'Car deleted'
+                'message': 'Product deleted'
             }
             return Response(response)
 
@@ -145,12 +145,12 @@ class CarDeleteView(APIView):
             response = {
                 'data': str(message),
                 'status': status.HTTP_404_NOT_FOUND,
-                'message': 'Car not found'
+                'message': 'Product not found'
             }
             return Response(response)
     
 
 # Viewsets orqali yozilgan view
-class CarsViewSets(viewsets.ModelViewSet):
-    queryset = Car.objects.all()
-    serializer_class = CarSerializer
+class ProductsViewSets(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer

@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
+from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 
 # Create your models here.
 
@@ -27,7 +27,7 @@ class CustomUserManager(BaseUserManager):
             )
     
 
-class CustomUser(AbstractBaseUser):
+class CustomUser(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=12, unique=True)
     name = models.CharField(max_length=30)
 

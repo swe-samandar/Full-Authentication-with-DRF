@@ -3,7 +3,7 @@ from methodism import custom_response, error_messages, MESSAGE
 from rest_framework.authtoken.models import Token
 from random import randint
 import string, uuid, datetime
-from .helper import send_with_thread
+from .helper import send_with_thread, is_valid_email, is_valid_phone
 
 
 # Validatsiya uchun yozilgan funksiyalar
@@ -24,8 +24,8 @@ def first_step_auth(request, params):
         return custom_response(False, message=error_messages.error_params_unfilled('phone'))
     
     # Telefon raqamni validatsiya qilish qismi
-    if not validate_phone_number(params['phone']):
-        return custom_response(False, message={"message": 'Telefon raqamni tekshirib qaytadan kiriting.'})
+    if not is_valid_phone(params['phone']) or not is_valid_email(params['phone']):
+        return custom_response(False, message={"message": 'Addressni tekshirib qaytadan kiriting.'})
         
     """
     Mijozga sms orqali yuborish uchun barcha raqamlar,
@@ -35,7 +35,7 @@ def first_step_auth(request, params):
     code = ''.join([chars[randint(0, len(chars)-1)] for _ in range(6)])
     key = str(uuid.uuid4()) + code
 
-    send_with_thread('muhammadyusufmamadaliyev0306@gmail.com', code)
+    # send_with_thread('muhammadyusufmamadaliyev0306@gmail.com', code)
 
     otp = OTP.objects.create(phone=params['phone'], key=key)
     return custom_response(True, data={'code': code, 'key': otp.key}, message={"message":"Success!"})
