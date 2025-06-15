@@ -40,5 +40,6 @@ class Product(models.Model):
             'short_desc': self.short_desc,
             'price': self.price,
             'price_type': self.price_type,
+            'image': self.image,
             'created_at': self.created_at
         }
